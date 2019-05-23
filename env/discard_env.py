@@ -48,19 +48,20 @@ class Discard(gym.Env):
         if dead:
             return self.state, -100, 1, {}
         else:
-            # Modify state with new food and flint
-            for i in range(len(Discard.SITES)):
-                for _ in range(Discard.FOOD_PER_STEP):
-                    self._add_to_state(i, False)
-
-            # Now, add flint
-            for i in range(len(Discard.SITES)):
-                r = numpy.random.uniform()
-                if r < Discard.FLINT_PER_FOOD:
-                    self._add_to_state(i, True)            
-
+            self._add_food_and_flint()
             return self.state, reward, 0, {}
 
+    def _add_food_and_flint(self):
+        # Modify state with new food and flint
+        for i in range(len(Discard.SITES)):
+            for _ in range(Discard.FOOD_PER_STEP):
+                self._add_to_state(i, False)
+
+        # Now, add flint
+        for i in range(len(Discard.SITES)):
+            r = numpy.random.uniform()
+            if r < Discard.FLINT_PER_STEP:
+                self._add_to_state(i, True)    
 
     def _random_point_in_grid(self, center, std):
         p = numpy.random.normal(center, std)
@@ -88,20 +89,26 @@ class Discard(gym.Env):
 
     def _eat_if_possible(self):
         """After movement is complete, the agent may eat up to MAX_NOURISHMENT_PER_STEP food provided it has flint"""
-        food_here = self.state[0][self.state[3]][0]
+        if self.state[2] < 1:
+            # Can't eat with no flint
+            return
+        food_here = self.state[0][self.state[3][0], self.state[3][1], 0]
         food_here = min(food_here, Discard.MAX_NOURISHMENT_PER_STEP)
-        self.state[0][self.state[3]][0] -= food_here
+        self.state[0][self.state[3][0], self.state[3][1], 0] -= food_here
         self.state[1] += food_here
+        self.state[2] -= max(Discard.FLINT_PER_FOOD*food_here,0)
 
     def _pick_up_flint_if_possible(self):
         """After movement is complete, the agent may pick up any flint in location"""
-        flint_here = self.state[0][self.state[3]][1]
-        self.state[0][self.state[3]][1] -= flint_here
+        flint_here = self.state[0][self.state[3][0], self.state[3][1],1]
+        self.state[0][self.state[3][0], self.state[3][1], 1] -= flint_here
         self.state[2] += flint_here     
 
     def _discard_flint_if_necessary(self, action):
         """The agent can discard flint in any location"""
-        self.state[0][self.state[3]][1] += action[4]*self.state[2]
+        flint_to_discard = action[4]*self.state[2]
+        self.state[0][self.state[3][0], self.state[3][1],1] += flint_to_discard
+        self.state[2] -= flint_to_discard
 
     def _move(self, action):
         """The agent can move in any direction it wants, or stay still"""
@@ -117,6 +124,7 @@ class Discard(gym.Env):
     def reset(self):
         self.state = [numpy.zeros((Discard.WIDTH, Discard.HEIGHT, 2)), Discard.INITIAL_NOURISHMENT, Discard.INITIAL_FLINT, numpy.random.uniform([0,0],[10,10], 2)]
         self.reward = 0
+        self._add_food_and_flint()
         return self.state
 
     def render(self, mode='human', close=False):
