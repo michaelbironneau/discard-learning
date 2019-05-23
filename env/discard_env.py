@@ -8,8 +8,8 @@ class Discard(gym.Env):
     WIDTH = 100
     HEIGHT = 100
     SITES = [numpy.array([int(WIDTH*0.25), int(HEIGHT*0.25)]), numpy.array([int(WIDTH*0.75), int(HEIGHT*0.75)])]
-    FOOD_PER_STEP = 5  # per site
-    FLINT_PER_STEP = 0.1
+    FOOD_PER_STEP = 5  # per site, should be an integer
+    FLINT_PER_STEP = 0.1  # per site, should be between 0 and 1
     DECAY_PER_STEP = 10
     INITIAL_NOURISHMENT = 100
     MAX_NOURISHMENT_PER_STEP = 5  # The max number of food that can be consumed in one timestep
@@ -44,11 +44,21 @@ class Discard(gym.Env):
 
         #4. Check if we're dead. If not, calculate reward and return. Otherwise, end simulation.
         dead = self._decay()
+
         if dead:
             return self.state, -100, 1, {}
         else:
-            #  Alternative
-            # return self.state, 0, 0, {}  # No reward for food? Is this realistic??
+            # Modify state with new food and flint
+            for i in range(len(Discard.SITES)):
+                for _ in range(Discard.FOOD_PER_STEP):
+                    self._add_to_state(i, False)
+
+            # Now, add flint
+            for i in range(len(Discard.SITES)):
+                r = numpy.random.uniform()
+                if r < Discard.FLINT_PER_FOOD:
+                    self._add_to_state(i, True)            
+
             return self.state, reward, 0, {}
 
 
