@@ -118,8 +118,10 @@ class Discard(gym.Env):
         weight = self.state[2]*Discard.FLINT_WEIGHT_COEFF
         if weight <= 0:
             weight = 1
-        new_p = self.state[3] + (1.0/weight)*(action[0]*numpy.array((0,1)) + action[1]*numpy.array((1,0)) + action[2]*numpy.array((0,-1)) + action[3]*numpy.array((-1,0)))
-        self.state[3] = new_p
+        new_p = self.state[3] + (10.0/weight)*(action[0]*numpy.array((0,1)) + action[1]*numpy.array((1,0)) + action[2]*numpy.array((0,-1)) + action[3]*numpy.array((-1,0)))
+        new_p[0] = numpy.clip(new_p[0], 0, Discard.WIDTH)
+        new_p[1] = numpy.clip(new_p[1], 0, Discard.HEIGHT)
+        self.state[3] = [int(new_p[0]), int(new_p[1])]
 
     def reset(self):
         self.state = [numpy.zeros((Discard.WIDTH, Discard.HEIGHT, 2)), Discard.INITIAL_NOURISHMENT, Discard.INITIAL_FLINT, numpy.random.uniform([0,0],[10,10], 2)]
@@ -128,6 +130,22 @@ class Discard(gym.Env):
         return self.state
 
     def render(self, mode='human', close=False):
-        pass
+        for i in range(Discard.WIDTH):
+            for j in range(Discard.HEIGHT):
+                if self.state[3][0] == i and self.state[3][1] == j:
+                    print("O", end = "")
+                elif self.state[0][i,j,0] > 0 :
+                    print("X", end = "")
+                elif self.state[0][i,j,1] > 0:
+                    print("F", end = "")
+                else:
+                    print(" ", end = "")
+            print("")
 
-    
+if __name__ == '__main__':
+    d = Discard()
+    d.reset()
+    action = [1, 1, 0, 0, 0]
+    for i in range(10):
+        d.step(action)
+        d.render()
